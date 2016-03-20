@@ -1,8 +1,17 @@
 package edu.temple.homedrone;
 
-import android.os.AsyncTask;
 
-import java.io.IOException;
+import android.app.Activity;
+import android.app.Notification;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
+import android.content.Context;
+import android.content.Intent;
+import android.content.res.Resources;
+import android.os.AsyncTask;
+import android.support.v4.app.NotificationCompat;
+
+
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
@@ -99,5 +108,21 @@ public class MessageClass extends AsyncTask
             e.printStackTrace();
         }
         return null;
+    }
+
+    public static void notifyUser( String notification, Activity mainActivity )
+    {
+        PendingIntent pi = PendingIntent.getActivity( mainActivity, 0, new Intent( mainActivity, MainActivity.class ), 0 );
+        Resources r = mainActivity.getResources();
+        Notification note = new NotificationCompat.Builder( mainActivity )
+                .setSmallIcon( android.R.drawable.ic_menu_report_image )
+                .setContentTitle( "HomeDrone Attention" )
+                .setContentText( notification )
+                .setContentIntent( pi )
+                .setAutoCancel( true )
+                .build();
+
+        NotificationManager notificationManager = ( NotificationManager ) mainActivity.getSystemService( Context.NOTIFICATION_SERVICE );
+        notificationManager.notify( 0, note );
     }
 }
