@@ -10,13 +10,20 @@ import android.content.Intent;
 import android.content.res.Resources;
 import android.os.AsyncTask;
 import android.support.v4.app.NotificationCompat;
+import android.util.Log;
 
+import org.apache.http.HttpResponse;
+import org.apache.http.NameValuePair;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.entity.UrlEncodedFormEntity;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.impl.client.DefaultHttpClient;
+import org.apache.http.message.BasicNameValuePair;
+import org.apache.http.util.EntityUtils;
 
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
-import java.net.InetAddress;
-import java.net.SocketException;
-import java.net.UnknownHostException;
+import java.util.ArrayList;
+import java.util.List;
+
 
 /**
  * Created by Eric on 3/13/2016.
@@ -24,9 +31,8 @@ import java.net.UnknownHostException;
 public class MessageClass extends AsyncTask
 {
     int requestCode = 0;
-    String         IPaddress;
-    String         port;
-    DatagramSocket datagramSocket;
+    String IPaddress;
+    String port;
 
     public MessageClass( String IPaddress, String port, int requestCode )
     {
@@ -59,15 +65,6 @@ public class MessageClass extends AsyncTask
     protected Object doInBackground( Object[] params )
     {
         String message = "";
-        int portNum = 0;
-        try
-        {
-            portNum = Integer.parseInt( port );
-        }
-        catch ( Exception e )
-        {
-            e.printStackTrace();
-        }
         switch ( requestCode )
         {
             case 1:
@@ -83,28 +80,26 @@ public class MessageClass extends AsyncTask
                 message = "Left";
                 break;
         }
+        Log.d( "message", message );
+        // Create a new HttpClient and Post Header
+        HttpClient httpclient = new DefaultHttpClient();
+        HttpPost httppost = new HttpPost( IPaddress );
+
         try
         {
-            datagramSocket = new DatagramSocket();
-            InetAddress local = InetAddress.getByName( IPaddress );
-            int msg_lenght = message.length();
-            byte[] messageByte = message.getBytes();
-            DatagramPacket p = new DatagramPacket( messageByte, msg_lenght, local, portNum );
-            datagramSocket.send( p );
-        }
-        catch ( SocketException e )
-        {
+            // Add your data
+            List< NameValuePair > nameValuePairs = new ArrayList< NameValuePair >( 2 );
+            nameValuePairs.add( new BasicNameValuePair( "move", message ) );
+            httppost.setEntity( new UrlEncodedFormEntity( nameValuePairs ) );
 
-            e.printStackTrace();
-        }
-        catch ( UnknownHostException e )
-        {
+            // Execute HTTP Post Request
+            HttpResponse response = httpclient.execute( httppost );
+            String result = EntityUtils.toString( response.getEntity() );
+            Log.d( "result ", result );
 
-            e.printStackTrace();
         }
         catch ( Exception e )
         {
-
             e.printStackTrace();
         }
         return null;
