@@ -4,8 +4,6 @@ package edu.temple.homedrone;
 import android.app.AlertDialog;
 import android.app.ProgressDialog;
 import android.content.DialogInterface;
-import android.media.MediaPlayer;
-import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.support.v7.app.AppCompatActivity;
@@ -20,7 +18,6 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.VideoView;
-import android.widget.MediaController;
 
 
 public class MainActivity extends AppCompatActivity
@@ -38,7 +35,7 @@ public class MainActivity extends AppCompatActivity
     private WebView        videoView;
     private VideoView      vv;
     private ProgressDialog pDialog;
-    private String VideoURLString = "http://www.androidbegin.com/tutorial/AndroidCommercial.3gp";
+    private String VideoURLString = "";
     AlertDialog.Builder builder;
     LinearLayout        lila1;
     private Handler      handler;
@@ -59,7 +56,6 @@ public class MainActivity extends AppCompatActivity
             {
                 MessageClass messageClass = new MessageClass( IPaddress, portText, 1 );
                 messageClass.execute( "" );
-                handler.postDelayed( this, 200 );
             }
         };
         final Runnable longBackward = new Runnable()
@@ -69,7 +65,6 @@ public class MainActivity extends AppCompatActivity
             {
                 MessageClass messageClass = new MessageClass( IPaddress, portText, 2 );
                 messageClass.execute( "" );
-                handler.postDelayed( this, 200 );
             }
         };
         final Runnable longRight = new Runnable()
@@ -79,7 +74,6 @@ public class MainActivity extends AppCompatActivity
             {
                 MessageClass messageClass = new MessageClass( IPaddress, portText, 3 );
                 messageClass.execute( "" );
-                handler.postDelayed( this, 200 );
             }
         };
         final Runnable longLeft = new Runnable()
@@ -89,7 +83,15 @@ public class MainActivity extends AppCompatActivity
             {
                 MessageClass messageClass = new MessageClass( IPaddress, portText, 4 );
                 messageClass.execute( "" );
-                handler.postDelayed( this, 200 );
+            }
+        };
+        final Runnable stop = new Runnable()
+        {
+            @Override
+            public void run()
+            {
+                MessageClass messageClass = new MessageClass( IPaddress, portText, 5 );
+                messageClass.execute( "" );
             }
         };
 
@@ -113,6 +115,7 @@ public class MainActivity extends AppCompatActivity
             public void onPageFinished( WebView view, String url )
             {
                 Log.i( "HomeDrone", "Finished loading URL: " + url );
+                injectCSS();
             }
 
             public void onReceivedError( WebView view, int errorCode, String description, String failingUrl )
@@ -126,6 +129,7 @@ public class MainActivity extends AppCompatActivity
             @Override
             public boolean onTouch( View v, MotionEvent event )
             {
+                boolean pressed = false;
                 switch ( event.getAction() )
                 {
                     case MotionEvent.ACTION_DOWN:
@@ -133,7 +137,7 @@ public class MainActivity extends AppCompatActivity
                         break;
                     case MotionEvent.ACTION_CANCEL:
                     case MotionEvent.ACTION_UP:
-                        handler.removeCallbacks( longForward );
+                        handler.post( stop );
                 }
                 return true;
             }
@@ -150,7 +154,7 @@ public class MainActivity extends AppCompatActivity
                         break;
                     case MotionEvent.ACTION_CANCEL:
                     case MotionEvent.ACTION_UP:
-                        handler.removeCallbacks( longBackward );
+                        handler.post( stop );
                 }
                 return true;
             }
@@ -167,7 +171,7 @@ public class MainActivity extends AppCompatActivity
                         break;
                     case MotionEvent.ACTION_CANCEL:
                     case MotionEvent.ACTION_UP:
-                        handler.removeCallbacks( longRight );
+                        handler.post( stop );
                 }
                 return true;
             }
@@ -184,54 +188,11 @@ public class MainActivity extends AppCompatActivity
                         break;
                     case MotionEvent.ACTION_CANCEL:
                     case MotionEvent.ACTION_UP:
-                        handler.removeCallbacks( longLeft );
+                        handler.post( stop );
                 }
                 return true;
             }
         } );
-    }
-
-    private void streamVideo()
-    {
-        pDialog = new ProgressDialog( MainActivity.this );
-        // Set progressbar title
-        pDialog.setTitle( "Loading Live Feed" );
-        // Set progressbar message
-        pDialog.setMessage( "Buffering..." );
-        pDialog.setIndeterminate( false );
-        pDialog.setCancelable( false );
-        // Show progressbar
-        pDialog.show();
-
-        try
-        {
-            // Start the MediaController
-            MediaController mediacontroller = new MediaController( MainActivity.this );
-            mediacontroller.setAnchorView( vv );
-            // Get the URL from String VideoURL
-            Uri video = Uri.parse( VideoURLString );
-            vv.setMediaController( mediacontroller );
-            vv.setVideoURI( video );
-
-        }
-        catch ( Exception e )
-        {
-            Log.e( "Error", e.getMessage() );
-            e.printStackTrace();
-        }
-
-        vv.requestFocus();
-        vv.setOnPreparedListener( new MediaPlayer.OnPreparedListener()
-        {
-            // Close the progress bar and play the video
-            public void onPrepared( MediaPlayer mp )
-            {
-                pDialog.dismiss();
-                vv.start();
-            }
-
-        } );
-
     }
 
     @Override
@@ -241,6 +202,8 @@ public class MainActivity extends AppCompatActivity
         getMenuInflater().inflate( R.menu.menu_main, menu );
         return true;
     }
+
+
 
     @Override
     public boolean onOptionsItemSelected( MenuItem item )
@@ -263,6 +226,9 @@ public class MainActivity extends AppCompatActivity
             videoURL.setHint( "Video URL" );
             IPaddressET.setHint( "IP Address" );
             portET.setHint( "Port" );
+            portET.setText( portText );
+            IPaddressET.setText( IPaddress );
+            videoURL.setText( VideoURLString );
             lila1.addView( videoURL );
             lila1.addView( IPaddressET );
             lila1.addView( portET );
@@ -299,16 +265,28 @@ public class MainActivity extends AppCompatActivity
         return super.onOptionsItemSelected( item );
     }
 
+    private void injectCSS() {
+        try {
+            videoView.loadUrl( "javascript:(function() {" +
+                    "var img = document.getElementsByTagName('img').item(0);" +
+                    "img.style.width=1000px })()" );
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
     @Override
     protected void onResume()
     {
         super.onResume();
+        videoView.onResume();
     }
 
     @Override
     protected void onPause()
     {
         super.onPause();
+        videoView.onPause();
     }
 
 

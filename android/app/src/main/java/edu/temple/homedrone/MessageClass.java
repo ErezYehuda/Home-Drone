@@ -25,9 +25,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 
-/**
- * Created by Eric on 3/13/2016.
- */
 public class MessageClass extends AsyncTask
 {
     int requestCode = 0;
@@ -37,10 +34,12 @@ public class MessageClass extends AsyncTask
     public MessageClass( String IPaddress, String port, int requestCode )
     {
         this.IPaddress = IPaddress;
+        if ( !IPaddress.startsWith( "HTTP://" ) )
+        {
+            this.IPaddress = "HTTP://" + IPaddress;
+        }
         this.requestCode = requestCode;
         this.port = port;
-
-
     }
 
     @Override
@@ -79,17 +78,19 @@ public class MessageClass extends AsyncTask
             case 4:
                 message = "Left";
                 break;
+            case 5:
+                message = "Stop";
+                break;
         }
-        Log.d( "message", message );
+        Log.d( "Message Sent", message );
         // Create a new HttpClient and Post Header
         HttpClient httpclient = new DefaultHttpClient();
         HttpPost httppost = new HttpPost( IPaddress );
-
         try
         {
-            // Add your data
+            // Add data
             List< NameValuePair > nameValuePairs = new ArrayList< NameValuePair >( 2 );
-            nameValuePairs.add( new BasicNameValuePair( "move", message ) );
+            nameValuePairs.add( new BasicNameValuePair( "COMMAND", message ) );
             httppost.setEntity( new UrlEncodedFormEntity( nameValuePairs ) );
 
             // Execute HTTP Post Request
