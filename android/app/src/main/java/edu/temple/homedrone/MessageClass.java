@@ -13,16 +13,12 @@ import android.support.v4.app.NotificationCompat;
 import android.util.Log;
 
 import org.apache.http.HttpResponse;
-import org.apache.http.NameValuePair;
 import org.apache.http.client.HttpClient;
-import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.HttpPost;
+import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.DefaultHttpClient;
-import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.util.EntityUtils;
-
-import java.util.ArrayList;
-import java.util.List;
+import org.json.JSONObject;
 
 
 public class MessageClass extends AsyncTask
@@ -89,9 +85,10 @@ public class MessageClass extends AsyncTask
         try
         {
             // Add data
-            List< NameValuePair > nameValuePairs = new ArrayList< NameValuePair >( 2 );
-            nameValuePairs.add( new BasicNameValuePair( "COMMAND", message ) );
-            httppost.setEntity( new UrlEncodedFormEntity( nameValuePairs ) );
+            JSONObject jsonObject = new JSONObject( "{\"COMMAND\":\"" + message + "\"}" );
+
+            StringEntity se = new StringEntity( jsonObject.toString() );
+            httppost.setEntity( se );
 
             // Execute HTTP Post Request
             HttpResponse response = httpclient.execute( httppost );
