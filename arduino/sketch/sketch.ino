@@ -27,6 +27,7 @@ void loop() {
   //sprintf(dataString,"%s",a); // convert a value to hexa 
   
   //Serial.println("Ready");
+//  Serial.print('f');
   if(Serial.available() ){
     dataString = "";
     dataString = Serial.readString();
@@ -48,8 +49,8 @@ void loop() {
          //digitalWrite(speedB, LOW);
          
           //delay(500); // keep the motor rolling for one second
-          Serial.println("forwarding...");          
-      }else if(strcmp(dataString.c_str(), "Backward") == 0 ){
+          Serial.print('f');          
+     }else if(strcmp(dataString.c_str(), "Backward") == 0 ){
          //backward
         digitalWrite (dirA, LOW);
         digitalWrite (dirB, LOW);
@@ -57,12 +58,8 @@ void loop() {
         analogWrite (speedA, 255);
         analogWrite (speedB, 255);
       
-        delay(500);
-        // stop the motor
-        digitalWrite(speedA, LOW);
-        digitalWrite(speedB, LOW);
-        //delay(500); // keep the motor rolling for one second
-        Serial.println("Backing...");          
+       
+        Serial.print('b');          
     }else if(strcmp(dataString.c_str(), "Left") == 0 ){
        //Left
       
@@ -72,12 +69,8 @@ void loop() {
       analogWrite (speedA, 255);
       analogWrite (speedB, 255);
     
-      delay(500);
-      // stop the motor
-      digitalWrite(speedA, LOW);
-      digitalWrite(speedB, LOW);
-      //delay(500); // keep the motor rolling for one second  
-      Serial.println("left...");          
+      
+      Serial.print('l');          
     }else if(strcmp(dataString.c_str(), "Right") == 0 ){
          //Right
         digitalWrite (dirA, HIGH);
@@ -86,18 +79,74 @@ void loop() {
         analogWrite (speedA, 255);
         analogWrite (speedB, 255);
       
-        delay(500);
-        // stop the motor
-        digitalWrite(speedA, LOW);
-        digitalWrite(speedB, LOW);
-        //delay(500); // keep the motor rolling for one second
-        Serial.println("right..");          
+        
+        Serial.print('r');          
     }else if(strcmp(dataString.c_str(), "Stop") == 0 ){
         digitalWrite(speedA, LOW);
         digitalWrite(speedB, LOW);
-        Serial.println("stopped");
+        Serial.print('s');
+        
+    }else if(strcmp(dataString.c_str(), "ForwardStop") == 0){
+        // move the motor A to one direction increasing speed
+          digitalWrite (dirA, HIGH);
+          digitalWrite (dirB, HIGH);
+          
+          analogWrite (speedA, 255);
+          analogWrite (speedB, 255);
+          delay (300);
+            // stop the motor
+         digitalWrite(speedA, LOW);
+         digitalWrite(speedB, LOW);
+         
+         Serial.print('f'); 
+         
+    }else if(strcmp(dataString.c_str(), "BackwardStop") == 0){
+        // move the motor A to one direction increasing speed
+          digitalWrite (dirA, LOW);
+          digitalWrite (dirB, LOW);
+          
+          analogWrite (speedA, 255);
+          analogWrite (speedB, 255);
+          delay (300);
+          
+          // stop the motor
+          digitalWrite(speedA, LOW);
+          digitalWrite(speedB, LOW);
+         
+          Serial.print('b'); 
+    }if(strcmp(dataString.c_str(), "LeftStop") == 0){
+         //Left
+      
+      digitalWrite (dirA, LOW);
+      digitalWrite (dirB, HIGH);
+    
+      analogWrite (speedA, 255);
+      analogWrite (speedB, 255);
+      delay (300);
+      
+      // stop the motor
+      digitalWrite(speedA, LOW);
+      digitalWrite(speedB, LOW);
+      
+      Serial.print('l'); 
+    }if(strcmp(dataString.c_str(), "RightStop") == 0){
+        //Right
+        digitalWrite (dirA, HIGH);
+        digitalWrite (dirB, LOW);
+      
+        analogWrite (speedA, 255);
+        analogWrite (speedB, 255);
+        
+        delay (300);
+      
+         // stop the motor
+        digitalWrite(speedA, LOW);
+        digitalWrite(speedB, LOW);
+      
+        Serial.print('r'); 
     }else{
-      Serial.println("error input: " + dataString);
+      //Serial.println("error input: " + dataString);
+       Serial.print('e'); 
     }
     
   }//end of if   

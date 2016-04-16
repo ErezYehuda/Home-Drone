@@ -1,5 +1,5 @@
 from http.server import BaseHTTPRequestHandler, HTTPServer
-#import urllib.request
+from gcm import GCM
 import socket
 import sys
 import os, time
@@ -18,8 +18,12 @@ R_PORT = 8083
 CLOSEOUT = str.encode('CLOSEOUT')
 global HTTP_Forward_Target
 HTTP_Forward_Target = None
-#global HTTP_Should_Serve
-#HTTP_Should_Serve = True
+global gcm
+gcm = GCM('AIzaSyCrw1Q_ynh1vaijU82_uyreeEUFmQ_lw5Q');
+global reg_ids
+#reg_ids = ['APA91bGX_OZKdISlPstxakKsAMT6wGVJZ87tTXg5wGLzQGt3VbHAkiZiSW22RrmG876_Qu2ErcfteNoqpA0RQjLCrGNi-AIvSXQy5s-qP81HnL0pwkC4EwckxWtecYWGIR7m8dW4itt2']
+reg_ids = []
+
 
 class Device:
     def __init__(self, name, port, connection=None, open=False):
@@ -53,12 +57,20 @@ class HTTPForwarder(BaseHTTPRequestHandler):
         data = self.rfile.read(length).decode('utf-8')
         #print(data)
         data = json.loads(data)
-        print(data)
-        print(data["COMMAND"])
+        #if 'COMMAND' in data:
+        #{ "REGISTER_ID": "ASDFAS123123"}
                
         global HTTP_Forward_Target
-        if HTTP_Forward_Target is not None:
-            HTTP_Forward_Target.put(str.encode(data["COMMAND"]))
+        global reg_ids
+        if HTTP_Forward_Target is not None and data:
+            if 'COMMAND' in data:                
+                print(data["COMMAND"])
+                HTTP_Forward_Target.put(str.encode(data["COMMAND"]))
+            if 'REGISTER_ID' in data and data['REGISTER_ID'] not in reg_ids:
+                print('Registering device for notifications')
+                reg_ids.append(data['REGISTER_ID'])
+                #print('Registered',data['REGISTER_ID'])
+                
         #sendTCP.send_tcp(str.encode(data["x"]))
         
         self.send_response(200)
@@ -76,13 +88,16 @@ class TCP_OUT(threading.Thread):
         #print('init',self.device.name)
         
     def run(self):
+        global gcm
+        global reg_ids
         #print('run',self.device.name)
         while not self.stoprequest.isSet() and self.device.open:
             try:
                 pass_message = self.own_q.get()
                 print(pass_message)
+                print(pass_message.decode("utf-8").startswith('NOTIFY:'))
                 if pass_message == CLOSEOUT:
-                    print('\n---Received kill command for EX-{}---\n'.format(self.device.name))
+                    print('\n---Received kill command for EX-{}---\n'.format(self.device.name))                
                 else:
                     print('{} FORWARD--->{}'.format(self.device.name, pass_message))
                     #self.device.connection.sendall(pass_message)
@@ -127,20 +142,28 @@ class TCP_IN(threading.Thread):
                 #Mark connection established
                 self.device.open = True
                 #Make this device available to receive TCP forwards
-                self.forward_to = TCP_OUT(self.device, self.own_q)
+                while not self.own_q.empty():
+                    self.own_q.get()
+                while not self.opposite_q.empty():
+                    self.opposite_q.get()
+                self.forward_to = TCP_OUT(self.device, self.own_q)                
                 self.forward_to.start()
             
             try:
                 print("Connection from", client_address)
                 while True:
                     #print(self.device.connection)
-                    data = self.device.connection.recv(32)
+                    data = self.device.connection.recv(256)
                     if data:
+                        #print(data.decode('utf-8'))
                         if data == CLOSEOUT:
                             print('\n---Received kill command for IN-{}---\n'.format(self.device.name))
                             self.device.open = False
                             self.forward_to.join()
                             break
+                        elif data.decode("utf-8").startswith('NOTIFY:'):                        
+                            response = gcm.json_request(registration_ids=reg_ids, data={'body':data.decode("utf-8")})
+                            print('Notify<---',data.decode('utf-8'))
                         else:
                             print("<--- {}".format(data))
                             #self.device.connection.sendall(str.encode("Got your message"))
