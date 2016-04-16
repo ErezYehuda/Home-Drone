@@ -4,6 +4,7 @@ import select
 import serial
 import cv2
 import time
+import detectPeople
 
 cap = cv2.VideoCapture(1)
 face_cascade = cv2.CascadeClassifier('haarcascade_frontalface_alt.xml')
@@ -47,10 +48,14 @@ def auto_mode():
     print "capture is " + str(suc)
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     tries = drive(gray, tries, directions, direction)
+    people = detectPeople.analyze(img)
+    if(len(people)):
+        print 'Saw %d people' % len(people)
+    return len(people)
 
 def send_tcp(message):
     global isAuto
-    HOST = '45.79.173.164'
+    HOST = '54.152.236.7'
     H = HTTP = 'HTTP'
     #192.168.42.1
     # Create a TCP/IP socket
@@ -94,7 +99,9 @@ def send_tcp(message):
 			print ('wrote to serial')
 			ser.write(data.encode())
             if isAuto == True:
-		auto_mode();
+                people = auto_mode()
+                if people:
+                    sock.sendall(str.encode('NOTIFY:Detected %d people' % people))
 	    data = ""
 	    print str(ser.read())
 	    #else:
