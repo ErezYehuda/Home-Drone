@@ -1,6 +1,5 @@
 <resources>
-    <string name="app_name">RC Explorer</string>
-
-    <string name="dummy_button">Dummy Button</string>
-    <string name="dummy_content">DUMMY\nCONTENT</string>
+    <string name="app_name">HomeDrone</string>
+    <string name="action_settings">Settings</string>
+    <string name="title_activity_splash">Splash</string>
 </resources>
