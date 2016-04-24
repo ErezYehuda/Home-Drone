@@ -8,15 +8,181 @@ import threading, Queue
 import detectPeople
 
 CLOSE = b'CLOSEOUT'
+####RP variables
 HOST = '54.152.236.7'
 PORT = 8083
 
 global sock
-#sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 global open
 open = False
 global autoOn
 autoOn = False
+####Automation variables
+F = 'Forward'.encode()
+R = 'Right'.encode()
+B = 'Backward'.encode()
+L = 'Left'.encode()
+FS = 'ForwardStop'.encode()
+RS = 'RightStop'.encode()
+BS = 'BackwardStop'.encode()
+LS = 'LeftStop'.encode()
+S = 'Stop'.encode()
+
+FA = 'ForwardFast'.encode()
+LA = 'LeftAuto'.encode()
+RA = 'RightAuto'.encode()
+
+global correct
+correct = False
+global lastStep
+lastStep = S
+
+global CurrentImg
+CurrentImg = None
+global CurrentMove
+CurrentMove = S
+####
+
+class AutoMove(threading.Thread):
+    def __init__(self):
+        super(AutoMove,self).__init__()
+        #self.MQ = MQ
+        self.alive = True
+        self.ser = serial.Serial('/dev/ttyACM0',115200)
+        self.ser.timeout = None;
+
+    def run(self):
+        while self.alive:
+            command = CurrentMove#self.MQ.get()
+            if command is CLOSE:
+                print 'AutoMove -> CLOSE'                
+                self.alive = False                
+                break;
+            ##else:
+            elif command:
+                self.ser.write(command)
+                self.ser.read()
+            #print command
+
+    def join(self, timeout=None):        
+        self.alive = False
+        CurrentMove = CLOSE#self.MQ.put(CLOSE)
+        self.ser.write(S)
+        #print 'CLOSING AutoMove'
+        print 'Closing AutoMove'
+        super(AutoMove,self).join(timeout)
+######################################
+class Video(threading.Thread):
+    def __init__(self):
+        super(Video,self).__init__()
+        self.alive = True
+        self.cap = cv2.VideoCapture(1)
+
+    def run(self):
+        global CurrentImg        
+        while self.alive:            
+            succ, CurrentImg = self.cap.read()
+
+    def join(self,timeout=0):
+        self.alive = False
+        CurrentImg = CLOSE
+        print 'Closing Video'
+        super(Video,self).join(timeout)
+######################################        
+class Analyze(threading.Thread):
+    def __init__(self, NQ):
+        super(Analyze,self).__init__()
+        self.NQ = NQ
+        self.alive = True        
+        self.face_cascade = cv2.CascadeClassifier('haarcascade_frontalface_alt.xml')
+        self.video = Video()
+        self.video.start()
+
+    def run(self):
+        global CurrentImg
+        while self.alive:
+            getImg = CurrentImg
+            if getImg is not None and getImg is not CLOSE:
+                #time.sleep(0.35)
+                #suc, img = self.cap.read()
+                faces = self.face_cascade.detectMultiScale(getImg, 1.3, 5)            
+                self.NQ.put((faces,getImg))
+               # print '%d faces' % (len(faces),)
+
+    def join(self, timeout=None):
+        self.alive = False
+        self.video.join()
+        #self.cap.close()
+        print 'Closing Analyze'
+        super(Analyze,self).join(timeout)
+######################################
+class Navigate(threading.Thread):
+    def __init__(self,NQ):
+        super(Navigate,self).__init__()
+        self.alive = True
+        self.NQ = NQ
+        print 'NAV STARTED'
+
+    def run(self):
+        global CurrentMove
+        global correct
+        global lastStep
+        text = ''
+        while self.alive:
+            faces,img = self.NQ.get()
+            if faces is CLOSE:
+                break
+            if len(faces):
+                correct = True
+                #print "Marker Detected"
+                tries = 0
+                (x,y,w,h) = faces[0]                
+                #cv2.rectangle(img, (x,y),(x+w,y+h),(0255,0),2)
+                if h > 300:#target reached sitance
+                    print 'NEXT MARKER:%d > 320 ->R'% h    
+                    CurrentMove = RA#MQ.put(RS)# ser.write(R)#                    
+                    ##cv2.putText(img, "Reached: " + text, (5 , 50), cv2.FONT_HERSHEY_PLAIN, 1, (0,255,0))
+                    #time.sleep(0.25)
+                    #MQ.put(S)#ser.write(S)
+                    lastStep = RA
+                if x+w/2 > 640 * 2/3:
+                    print 'x+w/2:%d > %d ->R' % ((x+w/2), (640*2/3))
+                    CurrentMove = FA#MQ.put(RS)#ser.write(R)#
+                    ##cv2.putText(img, "RIGHT: " + text, (5 , 50), cv2.FONT_HERSHEY_PLAIN, 1, (0,255,0))
+                    #time.sleep(0.25)
+                    #MQ.put(S)#ser.write(S)
+                    lastStep = LA
+                if x+w/2 < 640 * 1/3:
+                    print 'x+w/2:%d > %d ->L' % ((x+w/2), (640*1/3))
+                    CurrentMove = FA#MQ.put(LS)#ser.write(L)#
+                    ##cv2.putText(img, "LEFT: " + text, (5 , 50), cv2.FONT_HERSHEY_PLAIN, 1, (0,255,0))
+                    #time.sleep(0.25)
+                    #MQ.put(S)#ser.write(S)
+                    lastStep = RA
+                if h <= 320 and x+w/2 <= 640 * 2/3 and x+w/2 >= 640 * 1/3:
+                    print 'x+w/2:%d > %d ->F' % ((x+w/2), (640*1/3))
+                    CurrentMove = FA#MQ.put(FS)#ser.write(F)#
+                    ##cv2.putText(img, "FORWARD: " + text, (5 , 50), cv2.FONT_HERSHEY_PLAIN, 1, (0,255,0))
+                    #time.sleep(0.25)
+                    #MQ.put(S)#ser.write(S)
+                    lastStep = LA
+            else:
+                if correct:
+                    correct = False
+                    CurrentMove = lastStep
+                else:
+                    CurrentMove = RA#MQ.put(RS)#ser.write(RS)
+                print 'Lost: ' + CurrentMove
+            ##cv2.imshow('img',img)
+            ##cv2.waitKey(1)
+
+    def join(self,timeout=None):
+        self.alive = False
+        self.NQ.put((CLOSE,None))
+        CurrentMove = CLOSE#self.NQ.put(CLOSE)
+        print 'Closing Navigate'
+        super(Navigate,self).join(timeout)
+######################################
 
 class Move(threading.Thread):
     def __init__(self, MQ):
@@ -137,15 +303,15 @@ class TCP_IN(threading.Thread):
 class AI(threading.Thread):
     def __init__(self, IQ, MQ, out_Q, autoStart = False):
         super(AI,self).__init__()
-        self.cap = cv2.VideoCapture(1)
-        #self.tries = 0
-        #self.directions = ("Left", "Right")
-        #self.direction = 1
+        #self.cap = cv2.VideoCapture(1)
         self.MQ = MQ
         self.out_Q = out_Q
         self.IQ = IQ
         self.IQ.put('Stop')
-        #self.autoStart = autoStart
+        self.nav_Q = Queue.Queue()
+        self.move = None
+        self.analyze = None
+        self.navigate = None
         if autoStart:
             print 'AutoStart'
             self.IQ.put('Start') 
@@ -154,26 +320,43 @@ class AI(threading.Thread):
         self.alive = True
 
     def run(self):
+        global CurrentImg
         global autoOn
         error = False
         while self.alive:
-            if not self.IQ.empty(): #If there's a stop command                
+            if not self.IQ.empty(): #If there's a stop command     
+                if autoOn:
+                    if self.move:
+                        self.move.join()
+                        self.move = None
+                    if self.analyze:
+                        self.analyze.join()
+                        self.analyze = None 
+                    if self.navigate:
+                        self.navigate.join()
+                        self.navigate = None
                 autoOn = False #Pause
-                #print 'Clearing STOP\n'
                 self.IQ.get() #Clear stop command
-                #print 'AFTER STOP\n'
-                #if self.IQ.empty():
-                #    print 'Paused AI\n'
                 if not self.alive:
                     break
                 self.IQ.get() #Wait for continue command
+                if not autoOn and self.alive:
+                    if not self.move:
+                        self.move = AutoMove()
+                        self.move.start()
+                    while not self.nav_Q.empty():
+                        self.nav_Q.get()
+                    if not self.analyze:
+                        self.analyze = Analyze(self.nav_Q)
+                        self.analyze.start()
+                    if not self.navigate:
+                        self.navigate = Navigate(self.nav_Q)
+                        self.navigate.start()                        
                 autoOn = True
             if not self.alive:
                 break
-            suc, img = self.cap.read()
-            #self.gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-            #self.tries = drive(gray, self.tries, self.directions, self.direction)
-            #print 'Looking for people'
+            #suc, img = self.cap.read()
+            img = CurrentImg
             people = []
             try:
                 people = detectPeople.analyze(img)
@@ -181,17 +364,14 @@ class AI(threading.Thread):
                 if not error:
                     print 'Error with video feed'
                     error = True
-            #print 'Done looking'
             if(len(people)):
                 error = False
                 print 'Saw %d people' % len(people)
                 self.out_Q.put('NOTIFY:Saw %s people' % len(people))
-            #print 'Active AI\n'
-            #break
 
     def join(self, timeout=False):
         self.alive = False
-        self.cap.release()
+        #self.cap.release()
         self.IQ.put('Stop')
         self.IQ.put('Start')
         super(AI,self).join(timeout)

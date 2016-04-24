@@ -1,5 +1,5 @@
 //char dataString[100] = {0};
-char dataBuffer[100] = {0};
+char dataBuffer[128] = {0};
 String dataString = "";
 int a =0; 
 
@@ -7,7 +7,10 @@ int dirA = 12;
 int dirB = 13;  
 int speedA = 3;
 int speedB = 11; 
-
+int slow = 200;
+int fast = 300;
+int faster = 400;
+int turn = 200;
 
 void setup() {
     Serial.begin(115200);              //Starting serial communication
@@ -22,20 +25,17 @@ void setup() {
     dataString = "";
 }
   
-void loop() {
-
-  //sprintf(dataString,"%s",a); // convert a value to hexa 
-  
-  //Serial.println("Ready");
-//  Serial.print('f');
+void loop() {  
   if(Serial.available() ){
+
     dataString = "";
     dataString = Serial.readString();
   
    digitalWrite(speedA, LOW);
    digitalWrite(speedB, LOW);
-  
-   if(strcmp(dataString.c_str(), "Forward") == 0 ){
+   const char *payload; 
+   payload = dataString.c_str();
+   if(strcmp(payload, "Forward") == 0 ){
 
           // move the motor A to one direction increasing speed
           digitalWrite (dirA, HIGH);
@@ -43,14 +43,8 @@ void loop() {
           
           analogWrite (speedA, 255);
           analogWrite (speedB, 255);
-          //delay (1000);
-            // stop the motor
-         //digitalWrite(speedA, LOW);
-         //digitalWrite(speedB, LOW);
-         
-          //delay(500); // keep the motor rolling for one second
-          Serial.print('f');          
-     }else if(strcmp(dataString.c_str(), "Backward") == 0 ){
+                   
+     }else if(strcmp(payload, "Backward") == 0 ){
          //backward
         digitalWrite (dirA, LOW);
         digitalWrite (dirB, LOW);
@@ -59,8 +53,7 @@ void loop() {
         analogWrite (speedB, 255);
       
        
-        Serial.print('b');          
-    }else if(strcmp(dataString.c_str(), "Left") == 0 ){
+    }else if(strcmp(payload, "Left") == 0 ){
        //Left
       
       digitalWrite (dirA, LOW);
@@ -68,10 +61,8 @@ void loop() {
     
       analogWrite (speedA, 255);
       analogWrite (speedB, 255);
-    
-      
-      Serial.print('l');          
-    }else if(strcmp(dataString.c_str(), "Right") == 0 ){
+            
+    }else if(strcmp(payload, "Right") == 0 ){
          //Right
         digitalWrite (dirA, HIGH);
         digitalWrite (dirB, LOW);
@@ -79,42 +70,38 @@ void loop() {
         analogWrite (speedA, 255);
         analogWrite (speedB, 255);
       
-        
-        Serial.print('r');          
-    }else if(strcmp(dataString.c_str(), "Stop") == 0 ){
+          
+    }else if(strcmp(payload, "Stop") == 0 ){
         digitalWrite(speedA, LOW);
         digitalWrite(speedB, LOW);
-        Serial.print('s');
         
-    }else if(strcmp(dataString.c_str(), "ForwardStop") == 0){
+    }else if(strcmp(payload, "ForwardStop") == 0){
         // move the motor A to one direction increasing speed
           digitalWrite (dirA, HIGH);
           digitalWrite (dirB, HIGH);
           
           analogWrite (speedA, 255);
           analogWrite (speedB, 255);
-          delay (300);
+          delay (fast);
             // stop the motor
          digitalWrite(speedA, LOW);
          digitalWrite(speedB, LOW);
+
          
-         Serial.print('f'); 
-         
-    }else if(strcmp(dataString.c_str(), "BackwardStop") == 0){
+    }else if(strcmp(payload, "BackwardStop") == 0){
         // move the motor A to one direction increasing speed
           digitalWrite (dirA, LOW);
           digitalWrite (dirB, LOW);
           
           analogWrite (speedA, 255);
           analogWrite (speedB, 255);
-          delay (300);
+          delay (fast);
           
           // stop the motor
           digitalWrite(speedA, LOW);
           digitalWrite(speedB, LOW);
          
-          Serial.print('b'); 
-    }if(strcmp(dataString.c_str(), "LeftStop") == 0){
+    }else if(strcmp(payload, "LeftStop") == 0){
          //Left
       
       digitalWrite (dirA, LOW);
@@ -122,14 +109,13 @@ void loop() {
     
       analogWrite (speedA, 255);
       analogWrite (speedB, 255);
-      delay (300);
+      delay (fast);
       
       // stop the motor
       digitalWrite(speedA, LOW);
       digitalWrite(speedB, LOW);
       
-      Serial.print('l'); 
-    }if(strcmp(dataString.c_str(), "RightStop") == 0){
+    }else if(strcmp(payload, "RightStop") == 0){
         //Right
         digitalWrite (dirA, HIGH);
         digitalWrite (dirB, LOW);
@@ -137,18 +123,51 @@ void loop() {
         analogWrite (speedA, 255);
         analogWrite (speedB, 255);
         
-        delay (300);
+        delay (fast);
       
          // stop the motor
         digitalWrite(speedA, LOW);
         digitalWrite(speedB, LOW);
       
-        Serial.print('r'); 
-    }else{
-      //Serial.println("error input: " + dataString);
-       Serial.print('e'); 
-    }
+    }else if(strcmp(payload, "ForwardFast") == 0){
+        // move the motor A to one direction increasing speed
+          digitalWrite (dirA, HIGH);
+          digitalWrite (dirB, HIGH);
+          
+          analogWrite (speedA, 255);
+          analogWrite (speedB, 255);
+          delay (faster);
+            // stop the motor
+         digitalWrite(speedA, LOW);
+         digitalWrite(speedB, LOW);
+    }else if(strcmp(payload, "LeftAuto") == 0){
+          
+      digitalWrite (dirA, LOW);
+      digitalWrite (dirB, HIGH);
     
-  }//end of if   
-
+      analogWrite (speedA, 255);
+      analogWrite (speedB, 255);
+      delay (turn);
+      
+      // stop the motor
+      digitalWrite(speedA, LOW);
+      digitalWrite(speedB, LOW);
+    }else if(strcmp(payload, "RightAuto") == 0){
+        //Right
+        digitalWrite (dirA, HIGH);
+        digitalWrite (dirB, LOW);
+      
+        analogWrite (speedA, 255);
+        analogWrite (speedB, 255);
+        
+        delay (turn);
+      
+         // stop the motor
+        digitalWrite(speedA, LOW);
+        digitalWrite(speedB, LOW);
+    }else{
+      //error input
+    }
+    Serial.write('g');
+  }//end of if 
 }
